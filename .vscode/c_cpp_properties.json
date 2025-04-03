@@ -1,0 +1,19 @@
+{
+    "version": 4,
+    "configurations": [
+      {
+        "name": "Mac",
+        "includePath": [
+          "${workspaceFolder}/**",
+          "/Applications/CPLEX_Studio2211/cplex/include",
+          "/Applications/CPLEX_Studio2211/cplex/include/ilcplex"
+        ],
+        "defines": [],
+        "macFrameworkPath": [],
+        "compilerPath": "/usr/bin/clang",
+        "cStandard": "c11",
+        "cppStandard": "c++17",
+        "intelliSenseMode": "macos-clang-x64"
+      }
+    ]
+  }
