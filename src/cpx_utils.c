@@ -17,9 +17,6 @@ double dist(int i, int j, instance *inst) {
     return dis + 0.0;
 }
 
-// Function prototypes
-void build_model(instance *inst, CPXENVptr env, CPXLPptr lp);
-int xpos(int i, int j, instance *inst);
 
 // Solve the TSP using CPLEX
 int TSPopt(instance *inst) {
