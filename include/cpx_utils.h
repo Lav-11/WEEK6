@@ -4,6 +4,8 @@
 #include <sys/stat.h>
 #include <ilcplex/cplex.h>
 
+#define VERBOSE 100
+
 // Define instance structure
 typedef struct {
     int nnodes;
@@ -11,6 +13,7 @@ typedef struct {
     double *ycoord;
     int integer_costs;
     double zbest;
+    double max_coord;
 } instance;
 
 // Function prototypes

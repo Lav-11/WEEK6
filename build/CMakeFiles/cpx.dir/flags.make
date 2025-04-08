@@ -6,7 +6,7 @@ C_DEFINES =
 
 C_INCLUDES = -I/Applications/CPLEX_Studio2211/cplex/include -I/Applications/CPLEX_Studio2211/cplex/include/ilcplex
 
-C_FLAGSarm64 =  -I/Applications/CPLEX_Studio2211/cplex/include -I/Applications/CPLEX_Studio2211/cplex/include/ilcplex -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk
+C_FLAGSarm64 =  -I/Applications/CPLEX_Studio2211/cplex/include -I/Applications/CPLEX_Studio2211/cplex/include/ilcplex -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk
 
-C_FLAGS =  -I/Applications/CPLEX_Studio2211/cplex/include -I/Applications/CPLEX_Studio2211/cplex/include/ilcplex -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.2.sdk
+C_FLAGS =  -I/Applications/CPLEX_Studio2211/cplex/include -I/Applications/CPLEX_Studio2211/cplex/include/ilcplex -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.4.sdk
 

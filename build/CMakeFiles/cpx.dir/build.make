@@ -53,10 +53,10 @@ RM = /usr/local/Cellar/cmake/3.30.0/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/ll/Desktop/Università/magistrale/OR2/week_6
+CMAKE_SOURCE_DIR = /Users/ll/Desktop/Università/magistrale/OR2/week_6
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/ll/Desktop/Università/magistrale/OR2/week_6/build
+CMAKE_BINARY_DIR = /Users/ll/Desktop/Università/magistrale/OR2/week_6/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/cpx.dir/depend.make
@@ -70,32 +70,32 @@ include CMakeFiles/cpx.dir/progress.make
 include CMakeFiles/cpx.dir/flags.make
 
 CMakeFiles/cpx.dir/src/main.c.o: CMakeFiles/cpx.dir/flags.make
-CMakeFiles/cpx.dir/src/main.c.o: /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c
+CMakeFiles/cpx.dir/src/main.c.o: /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c
 CMakeFiles/cpx.dir/src/main.c.o: CMakeFiles/cpx.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/cpx.dir/src/main.c.o"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/cpx.dir/src/main.c.o -MF CMakeFiles/cpx.dir/src/main.c.o.d -o CMakeFiles/cpx.dir/src/main.c.o -c /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/cpx.dir/src/main.c.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/cpx.dir/src/main.c.o -MF CMakeFiles/cpx.dir/src/main.c.o.d -o CMakeFiles/cpx.dir/src/main.c.o -c /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c
 
 CMakeFiles/cpx.dir/src/main.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/cpx.dir/src/main.c.i"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c > CMakeFiles/cpx.dir/src/main.c.i
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c > CMakeFiles/cpx.dir/src/main.c.i
 
 CMakeFiles/cpx.dir/src/main.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/cpx.dir/src/main.c.s"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c -o CMakeFiles/cpx.dir/src/main.c.s
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/main.c -o CMakeFiles/cpx.dir/src/main.c.s
 
 CMakeFiles/cpx.dir/src/cpx_utils.c.o: CMakeFiles/cpx.dir/flags.make
-CMakeFiles/cpx.dir/src/cpx_utils.c.o: /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c
+CMakeFiles/cpx.dir/src/cpx_utils.c.o: /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c
 CMakeFiles/cpx.dir/src/cpx_utils.c.o: CMakeFiles/cpx.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/cpx.dir/src/cpx_utils.c.o"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/cpx.dir/src/cpx_utils.c.o -MF CMakeFiles/cpx.dir/src/cpx_utils.c.o.d -o CMakeFiles/cpx.dir/src/cpx_utils.c.o -c /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/cpx.dir/src/cpx_utils.c.o"
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/cpx.dir/src/cpx_utils.c.o -MF CMakeFiles/cpx.dir/src/cpx_utils.c.o.d -o CMakeFiles/cpx.dir/src/cpx_utils.c.o -c /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c
 
 CMakeFiles/cpx.dir/src/cpx_utils.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/cpx.dir/src/cpx_utils.c.i"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c > CMakeFiles/cpx.dir/src/cpx_utils.c.i
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c > CMakeFiles/cpx.dir/src/cpx_utils.c.i
 
 CMakeFiles/cpx.dir/src/cpx_utils.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/cpx.dir/src/cpx_utils.c.s"
-	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c -o CMakeFiles/cpx.dir/src/cpx_utils.c.s
+	/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /Users/ll/Desktop/Università/magistrale/OR2/week_6/src/cpx_utils.c -o CMakeFiles/cpx.dir/src/cpx_utils.c.s
 
 # Object files for target cpx
 cpx_OBJECTS = \
@@ -109,7 +109,7 @@ cpx: CMakeFiles/cpx.dir/src/main.c.o
 cpx: CMakeFiles/cpx.dir/src/cpx_utils.c.o
 cpx: CMakeFiles/cpx.dir/build.make
 cpx: CMakeFiles/cpx.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking C executable cpx"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking C executable cpx"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/cpx.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -121,6 +121,6 @@ CMakeFiles/cpx.dir/clean:
 .PHONY : CMakeFiles/cpx.dir/clean
 
 CMakeFiles/cpx.dir/depend:
-	cd /Users/ll/Desktop/Università/magistrale/OR2/week_6/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /Users/ll/Desktop/Università/magistrale/OR2/week_6 /Users/ll/Desktop/Università/magistrale/OR2/week_6 /Users/ll/Desktop/Università/magistrale/OR2/week_6/build /Users/ll/Desktop/Università/magistrale/OR2/week_6/build /Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles/cpx.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /Users/ll/Desktop/Università/magistrale/OR2/week_6/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /Users/ll/Desktop/Università/magistrale/OR2/week_6 /Users/ll/Desktop/Università/magistrale/OR2/week_6 /Users/ll/Desktop/Università/magistrale/OR2/week_6/build /Users/ll/Desktop/Università/magistrale/OR2/week_6/build /Users/ll/Desktop/Università/magistrale/OR2/week_6/build/CMakeFiles/cpx.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/cpx.dir/depend
 
