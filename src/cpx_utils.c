@@ -19,78 +19,109 @@ double dist(int i, int j, instance *inst)
 
 
 /**************************************************************************************************************************/
-int TSPopt(instance *inst)
+int TSPopt(instance *inst) {
 /**************************************************************************************************************************/
-{  
-
-	// open CPLEX model
-	int error;
-	CPXENVptr env = CPXopenCPLEX(&error);
-	if ( error ) print_error("CPXopenCPLEX() error");
-	CPXLPptr lp = CPXcreateprob(env, &error, "TSP model version 1"); 
-	if ( error ) print_error("CPXcreateprob() error");
-
-	build_model(inst, env, lp);
-	
-	// Cplex's parameter setting
-	CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_OFF);
-	if ( VERBOSE >= 60 ) CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON); // Cplex output on screen
-	CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 123456);	
-	CPXsetdblparam(env, CPX_PARAM_TILIM, 3600.0); 
-	// ...
-
-	error = CPXmipopt(env,lp);
-	if ( error ) 
-	{
-		printf("CPX error code %d\n", error);
-		print_error("CPXmipopt() error"); 
-	}
-
-	// use the optimal solution found by CPLEX
-	
-	int ncols = CPXgetnumcols(env, lp);
-	double *xstar = (double *) calloc(ncols, sizeof(double));
-	if ( CPXgetx(env, lp, xstar, 0, ncols-1) ) print_error("CPXgetx() error");	
-    for ( int i = 0; i < inst->nnodes; i++ )
-	{
-		for ( int j = i+1; j < inst->nnodes; j++ )
-		{
-			if ( xstar[xpos(i,j,inst)] > 0.5 ) 
-            if (VERBOSE >= 60) printf("x(%3d,%3d) = 1\n", i+1,j+1);
-		}
-	}
-
-        // Finds successors
-        int *succ = (int *)calloc(inst->nnodes, sizeof(int));
-        compute_successors(inst, xstar, succ);
+    // open CPLEX model
+    int error;
+    CPXENVptr env = CPXopenCPLEX(&error);
+    if (error) print_error("CPXopenCPLEX() error");
+    CPXLPptr lp = CPXcreateprob(env, &error, "TSP model version 1");
+    if (error) print_error("CPXcreateprob() error");
     
-        // Prints the successors
-        if (VERBOSE >= 60) {
-            printf("\nArray of successors:\n");
-            for (int i = 0; i < inst->nnodes; i++) {
-                printf("    Node %d -> Node %d\n", i + 1, succ[i] + 1);
+    build_model(inst, env, lp);
+    
+    // Cplex's parameter setting
+    CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_OFF);
+    if (VERBOSE >= DEBUG) CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON); // Cplex output on screen
+    CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 123456);
+    double timelimit = 20.0;
+    CPXsetdblparam(env, CPX_PARAM_TILIM, timelimit);
+    
+    // Set a timer to track elapsed time
+    double start_time = 0.0;
+    CPXgettime(env, &start_time);
+
+    bool apply_patching = false; // Flag to control patching process
+    
+    error = CPXmipopt(env, lp);
+    if (error) {
+        printf("CPX error code %d\n", error);
+        print_error("CPXmipopt() error");
+    }
+    
+    // use the optimal solution found by CPLEX
+    int ncols = CPXgetnumcols(env, lp);
+    double *xstar = (double *)calloc(ncols, sizeof(double));
+    if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error");
+    
+    // Find and print connected components
+    int num_components = find_connected_components(inst->nnodes, xstar, inst);
+    
+    while (num_components > 1) {
+        double end_time = 0.0;
+        CPXgettime(env, &end_time);
+        double elapsed_time = end_time - start_time;
+    
+
+    
+        printf("Subtours detected: %d components. Adding SEC constraints...\n", num_components);
+        add_SEC_constraints(inst, env, lp, xstar);
+    
+        free(xstar);
+        xstar = (double *)calloc(CPXgetnumcols(env, lp), sizeof(double));
+    
+        if (CPXmipopt(env, lp)) print_error("CPXmipopt() error (after SEC)");
+    
+        if (CPXgetx(env, lp, xstar, 0, CPXgetnumcols(env, lp) - 1)) print_error("CPXgetx() error (after SEC)");
+    
+        num_components = find_connected_components(inst->nnodes, xstar, inst);
+
+        // Check if time limit is exceeded
+        if (elapsed_time >= timelimit) {  // Time limit exceeded
+            printf("Time limit exceeded. Initiating patching process...\n");
+            //patch_solution(inst, env, lp, xstar);
+            apply_patching = true; // Set the flag to true
+            break; // Exit the loop and perform patching
+        }
+
+    }
+
+    if(apply_patching == true) {
+        printf("Patching solution...\n");
+        patch_solution(xstar, inst);
+    }
+
+    // Find and display the solution
+    if (VERBOSE >= DEBUG) {
+        printf("Selected edges:\n");
+        for (int i = 0; i < inst->nnodes; i++) {
+            for (int j = i + 1; j < inst->nnodes; j++) {
+                if (xstar[xpos(i, j, inst)] > 0.5)
+                    if (VERBOSE >= DEBUG) printf("x(%3d,%3d) = 1\n", i + 1, j + 1);
             }
         }
-        // Find and print connected components
-        int num_components = find_connected_components(inst->nnodes, xstar, inst);
+    }
     
-        if (num_components == 1) {
-            printf("The graph is fully connected.\n");
-        } else {
-            printf("The graph has %d connected components.\n", num_components);
+    // Finds successors
+    int *succ = (int *)calloc(inst->nnodes, sizeof(int));
+    compute_successors(inst, xstar, succ);
+    
+    // Prints the successors
+    if (VERBOSE >= DEBUG) {
+        printf("\nArray of successors:\n");
+        for (int i = 0; i < inst->nnodes; i++) {
+            printf("    Node %d -> Node %d\n", i + 1, succ[i] + 1);
         }
+    }
     
-        plot_graph_to_image(inst->nnodes, inst->xcoord, inst->ycoord, xstar, inst, inst->max_coord, inst->max_coord * 0.1);
+    plot_graph_to_image(inst->nnodes, inst->xcoord, inst->ycoord, xstar, inst, inst->max_coord, inst->max_coord * 0.1);
     
-
-	free(xstar);
-	
-	// free and close cplex model   
-	CPXfreeprob(env, &lp);
-	CPXcloseCPLEX(&env); 
-
-	return 0; // or an appropriate nonzero error code
-
+    free(xstar);
+    // free and close CPLEX model
+    CPXfreeprob(env, &lp);
+    CPXcloseCPLEX(&env);
+    
+    return 0; // or an appropriate nonzero error code
 }
 
 /***************************************************************************************************************************/
@@ -162,8 +193,7 @@ void build_model(instance *inst, CPXENVptr env, CPXLPptr lp)
 
 }
 
-#define DEBUG    // comment out to avoid debugging 
-#define EPS 1e-5
+
 
 /*********************************************************************************************************************************/
 void build_sol(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp) // build succ() and comp() wrt xstar()...
@@ -284,13 +314,13 @@ int find_connected_components(int nnodes, double *xstar, instance *inst) {
 
     // Print the results
     for (int i = 1; i <= comp_id; i++) {
-        if (VERBOSE >= 60) printf("Component %d: ", i);
+        if (VERBOSE >= DEBUG) printf("Component %d: ", i);
         for (int j = 0; j < nnodes; j++) {
             if (visited[j] == i) {
-                if (VERBOSE >= 60) printf("%d ", j + 1); // Node belongs to the component
+                if (VERBOSE >= DEBUG) printf("%d ", j + 1); // Node belongs to the component
             }
         }
-        if (VERBOSE >= 60) printf("\n");
+        if (VERBOSE >= DEBUG) printf("\n");
     }
 
     // Free memory
@@ -384,4 +414,122 @@ void plot_graph_to_image(int nnodes, double *xcoord, double *ycoord, double *xst
     pclose(gnuplot);
 
     printf("Graph saved as an image: %s\n", image_file_path);
+}
+
+void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xstar) {
+    int *succ = (int *)calloc(inst->nnodes, sizeof(int));
+    int *comp = (int *)calloc(inst->nnodes, sizeof(int));
+    int ncomp;
+
+    build_sol(xstar, inst, succ, comp, &ncomp);
+
+    if (ncomp <= 1) {
+        free(succ);
+        free(comp);
+        return; // No subtours, no need to add SEC
+    }
+
+    printf("Adding %d subtour elimination constraints...\n", ncomp);
+
+    for (int k = 1; k <= ncomp; k++) {
+        // Count how many nodes are in component k
+        int size = 0;
+        for (int i = 0; i < inst->nnodes; i++) {
+            if (comp[i] == k) size++;
+        }
+
+        if (size <= 1) continue;
+
+        // Prepare indices and coefficients
+        int max_nz = size * (size - 1) / 2;
+        int *index = (int *)malloc(max_nz * sizeof(int));
+        double *value = (double *)malloc(max_nz * sizeof(double));
+        int nz = 0;
+
+        for (int i = 0; i < inst->nnodes; i++) {
+            if (comp[i] != k) continue;
+            for (int j = i + 1; j < inst->nnodes; j++) {
+                if (comp[j] != k) continue;
+                index[nz] = xpos(i, j, inst);
+                value[nz++] = 1.0;
+            }
+        }
+
+        double rhs = size - 1.0;
+        char sense = 'L'; // <=
+        int izero = 0;
+        char *rowname = (char *)malloc(100 * sizeof(char));
+        sprintf(rowname, "SEC_comp_%d", k);
+
+        int error = CPXaddrows(env, lp, 0, 1, nz, &rhs, &sense, &izero, index, value, NULL, &rowname);
+        if (error) print_error("CPXaddrows() failed for SEC");
+
+        free(index);
+        free(value);
+        free(rowname);
+    }
+
+    free(succ);
+    free(comp);
+}
+
+
+void patch_solution(double *xstar, instance *inst) {
+    int *succ = (int *) malloc(inst->nnodes * sizeof(int));
+    int *comp = (int *) malloc(inst->nnodes * sizeof(int));
+    int ncomp;
+
+    build_sol(xstar, inst, succ, comp, &ncomp);
+
+    if (ncomp <= 1) {
+        printf("No patching needed. Solution is a single tour.\n");
+        free(succ);
+        free(comp);
+        return;
+    }
+
+    printf("Patching needed. Components found: %d\n", ncomp);
+
+    while (ncomp > 1) {
+
+        double best_cost = DBL_MAX;
+        int best_i = -1, best_j = -1;
+
+        for (int i = 0; i < inst->nnodes; i++) {
+            for (int j = i + 1; j < inst->nnodes; j++) {
+                if (comp[i] != comp[j]) {
+                    double cij = dist(i, j, inst); 
+                    if (cij < best_cost) {
+                        best_cost = cij;
+                        best_i = i;
+                        best_j = j;
+                    }
+                }
+            }
+        }
+
+        if (best_i == -1 || best_j == -1) {
+            printf("No valid edge pairs found. Aborting patching.\n");
+            break;
+        }
+
+        // Find successors
+        int succ_i = succ[best_i];
+        int succ_j = succ[best_j];
+
+        // Remove two edges: (best_i, succ_i) and (best_j, succ_j)
+        xstar[xpos(best_i, succ_i, inst)] = 0.0;
+        xstar[xpos(best_j, succ_j, inst)] = 0.0;
+
+        // Add two new edges: (best_i, best_j) and (succ_i, succ_j)
+        xstar[xpos(best_i, best_j, inst)] = 1.0;
+        xstar[xpos(succ_i, succ_j, inst)] = 1.0;
+
+        // Rebuild the solution
+        build_sol(xstar, inst, succ, comp, &ncomp);
+        printf("Components after patching: %d\n", ncomp);
+    }
+
+    free(succ);
+    free(comp);
 }

@@ -1,10 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <float.h>
+#include <stdbool.h>
 #include <sys/stat.h>
 #include <ilcplex/cplex.h>
 
-#define VERBOSE 100
+#define VERBOSE 1
+#define DEBUG 80
+#define EPS 1e-5
 
 // Define instance structure
 typedef struct {
@@ -47,3 +51,8 @@ void create_directory(const char *path);
 
 // Function to plot the graph and save it as an image
 void plot_graph_to_image(int nnodes, double *xcoord, double *ycoord, double *xstar, instance *inst, double max_coord, double padding);
+
+// Function to build the solution from xstar
+void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xstar);
+
+void patch_solution(double *xstar, instance *inst);

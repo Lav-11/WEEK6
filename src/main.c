@@ -7,7 +7,7 @@
 int main() {
     // Create a random TSP instance
     instance inst;
-    inst.nnodes = 50; // number of nodes
+    inst.nnodes = 200; // number of nodes
     inst.xcoord = (double *)malloc(inst.nnodes * sizeof(double));
     inst.ycoord = (double *)malloc(inst.nnodes * sizeof(double));
     inst.integer_costs = 0; // Use continuous costs (Euclidean distances)
