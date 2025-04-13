@@ -37,15 +37,6 @@ void build_model(instance *inst, CPXENVptr env, CPXLPptr lp);
 // Solve the TSP using CPLEX
 int TSPopt(instance *inst);
 
-// Compute the successors of each node in the solution
-void compute_successors(instance *inst, double *xstar, int *succ);
-
-// Function to compute the successors of each node in the solution
-void dfs(int node, int *visited, int **adj_matrix, int n, int comp_id);
-
-// Function to find and count connected components
-int find_connected_components(int nnodes, double *xstar, instance *inst);
-
 // Function to ensure the directory exists
 void create_directory(const char *path);
 

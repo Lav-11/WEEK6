@@ -18,6 +18,69 @@ double dist(int i, int j, instance *inst)
 }        
 
 
+/*********************************************************************************************************************************/
+void build_sol(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp) // build succ() and comp() wrt xstar()...
+/*********************************************************************************************************************************/
+{   
+
+
+	int *degree = (int *) calloc(inst->nnodes, sizeof(int));
+	for ( int i = 0; i < inst->nnodes; i++ )
+	{
+		for ( int j = i+1; j < inst->nnodes; j++ )
+		{
+			int k = xpos(i,j,inst);
+			if ( fabs(xstar[k]) > EPS && fabs(xstar[k]-1.0) > EPS ) print_error(" wrong xstar in build_sol()");
+			if ( xstar[k] > 0.5 ) 
+			{
+				++degree[i];
+				++degree[j];
+			}
+		}
+	}
+	for ( int i = 0; i < inst->nnodes; i++ )
+	{
+		if ( degree[i] != 2 ) print_error("wrong degree in build_sol()");
+	}	
+	free(degree);
+
+
+	*ncomp = 0;
+	for ( int i = 0; i < inst->nnodes; i++ )
+	{
+		succ[i] = -1;
+		comp[i] = -1;
+	}
+	
+	for ( int start = 0; start < inst->nnodes; start++ )
+	{
+		if ( comp[start] >= 0 ) continue;  // node "start" was already visited, just skip it
+
+		// a new component is found
+		(*ncomp)++;
+		int i = start;
+		int done = 0;
+		while ( !done )  // go and visit the current component
+		{
+			comp[i] = *ncomp;
+			done = 1;
+			for ( int j = 0; j < inst->nnodes; j++ )
+			{
+				if ( i != j && xstar[xpos(i,j,inst)] > 0.5 && comp[j] == -1 ) // the edge [i,j] is selected in xstar and j was not visited before 
+				{
+					succ[i] = j;
+					i = j;
+					done = 0;
+					break;
+				}
+			}
+		}	
+		succ[i] = start;  // last arc to close the cycle
+		
+		// go to the next component...
+	}
+}
+
 /**************************************************************************************************************************/
 int TSPopt(instance *inst) {
 /**************************************************************************************************************************/
@@ -34,7 +97,7 @@ int TSPopt(instance *inst) {
     CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_OFF);
     if (VERBOSE >= DEBUG) CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON); // Cplex output on screen
     CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 123456);
-    double timelimit = 20.0;
+    double timelimit = 2.0;
     CPXsetdblparam(env, CPX_PARAM_TILIM, timelimit);
     
     // Set a timer to track elapsed time
@@ -54,17 +117,18 @@ int TSPopt(instance *inst) {
     double *xstar = (double *)calloc(ncols, sizeof(double));
     if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error");
     
-    // Find and print connected components
-    int num_components = find_connected_components(inst->nnodes, xstar, inst);
+    // Find connected components using build_sol
+    int *succ = (int *)calloc(inst->nnodes, sizeof(int));
+    int *comp = (int *)calloc(inst->nnodes, sizeof(int));
+    int ncomp;
+    build_sol(xstar, inst, succ, comp, &ncomp);
     
-    while (num_components > 1) {
+    while (ncomp > 1) {
         double end_time = 0.0;
         CPXgettime(env, &end_time);
         double elapsed_time = end_time - start_time;
     
-
-    
-        printf("Subtours detected: %d components. Adding SEC constraints...\n", num_components);
+        printf("Subtours detected: %d components. Adding SEC constraints...\n", ncomp);
         add_SEC_constraints(inst, env, lp, xstar);
     
         free(xstar);
@@ -74,16 +138,14 @@ int TSPopt(instance *inst) {
     
         if (CPXgetx(env, lp, xstar, 0, CPXgetnumcols(env, lp) - 1)) print_error("CPXgetx() error (after SEC)");
     
-        num_components = find_connected_components(inst->nnodes, xstar, inst);
+        build_sol(xstar, inst, succ, comp, &ncomp);
 
         // Check if time limit is exceeded
         if (elapsed_time >= timelimit) {  // Time limit exceeded
             printf("Time limit exceeded. Initiating patching process...\n");
-            //patch_solution(inst, env, lp, xstar);
             apply_patching = true; // Set the flag to true
             break; // Exit the loop and perform patching
         }
-
     }
 
     if(apply_patching == true) {
@@ -101,11 +163,7 @@ int TSPopt(instance *inst) {
             }
         }
     }
-    
-    // Finds successors
-    int *succ = (int *)calloc(inst->nnodes, sizeof(int));
-    compute_successors(inst, xstar, succ);
-    
+
     // Prints the successors
     if (VERBOSE >= DEBUG) {
         printf("\nArray of successors:\n");
@@ -113,9 +171,11 @@ int TSPopt(instance *inst) {
             printf("    Node %d -> Node %d\n", i + 1, succ[i] + 1);
         }
     }
-    
+
     plot_graph_to_image(inst->nnodes, inst->xcoord, inst->ycoord, xstar, inst, inst->max_coord, inst->max_coord * 0.1);
     
+    free(comp);
+    free(succ);
     free(xstar);
     // free and close CPLEX model
     CPXfreeprob(env, &lp);
@@ -193,145 +253,6 @@ void build_model(instance *inst, CPXENVptr env, CPXLPptr lp)
 
 }
 
-
-
-/*********************************************************************************************************************************/
-void build_sol(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp) // build succ() and comp() wrt xstar()...
-/*********************************************************************************************************************************/
-{   
-
-
-	int *degree = (int *) calloc(inst->nnodes, sizeof(int));
-	for ( int i = 0; i < inst->nnodes; i++ )
-	{
-		for ( int j = i+1; j < inst->nnodes; j++ )
-		{
-			int k = xpos(i,j,inst);
-			if ( fabs(xstar[k]) > EPS && fabs(xstar[k]-1.0) > EPS ) print_error(" wrong xstar in build_sol()");
-			if ( xstar[k] > 0.5 ) 
-			{
-				++degree[i];
-				++degree[j];
-			}
-		}
-	}
-	for ( int i = 0; i < inst->nnodes; i++ )
-	{
-		if ( degree[i] != 2 ) print_error("wrong degree in build_sol()");
-	}	
-	free(degree);
-
-
-	*ncomp = 0;
-	for ( int i = 0; i < inst->nnodes; i++ )
-	{
-		succ[i] = -1;
-		comp[i] = -1;
-	}
-	
-	for ( int start = 0; start < inst->nnodes; start++ )
-	{
-		if ( comp[start] >= 0 ) continue;  // node "start" was already visited, just skip it
-
-		// a new component is found
-		(*ncomp)++;
-		int i = start;
-		int done = 0;
-		while ( !done )  // go and visit the current component
-		{
-			comp[i] = *ncomp;
-			done = 1;
-			for ( int j = 0; j < inst->nnodes; j++ )
-			{
-				if ( i != j && xstar[xpos(i,j,inst)] > 0.5 && comp[j] == -1 ) // the edge [i,j] is selected in xstar and j was not visited before 
-				{
-					succ[i] = j;
-					i = j;
-					done = 0;
-					break;
-				}
-			}
-		}	
-		succ[i] = start;  // last arc to close the cycle
-		
-		// go to the next component...
-	}
-}
-
-
-
-// Compute the successors of each node in the solution
-void compute_successors(instance *inst, double *xstar, int *succ) {
-    for (int i = 0; i < inst->nnodes; i++) {
-        for (int j = 0; j < inst->nnodes; j++) {
-            if (i != j && xstar[xpos(i, j, inst)] > 0.5) {
-                succ[i] = j; // Node j is successor of node i
-                break;
-            }
-        }
-    }
-}
-
-// Depth-First Search (DFS) to explore nodes
-void dfs(int node, int *visited, int **adj_matrix, int n, int comp_id) {
-    visited[node] = comp_id; // Mark the node with the connected component ID
-    for (int j = 0; j < n; j++) {
-        if (adj_matrix[node][j] == 1 && visited[j] == 0) { // Adjacent unvisited node
-            dfs(j, visited, adj_matrix, n, comp_id); // Recursive call
-        }
-    }
-}
-
-// Function to find and count connected components
-int find_connected_components(int nnodes, double *xstar, instance *inst) {
-    // Create an adjacency matrix
-    int **adj_matrix = (int **)malloc(nnodes * sizeof(int *));
-    for (int i = 0; i < nnodes; i++) {
-        adj_matrix[i] = (int *)calloc(nnodes, sizeof(int)); // Initialize to 0
-    }
-
-    // Populate the adjacency matrix based on edges selected in xstar
-    for (int i = 0; i < nnodes; i++) {
-        for (int j = i + 1; j < nnodes; j++) {
-            if (xstar[xpos(i, j, inst)] > 0.5) { // If edge (i, j) is selected
-                adj_matrix[i][j] = 1;
-                adj_matrix[j][i] = 1; // Undirected graph
-            }
-        }
-    }
-
-    // Array to track visited nodes
-    int *visited = (int *)calloc(nnodes, sizeof(int));
-
-    // Count connected components
-    int comp_id = 0;
-    for (int i = 0; i < nnodes; i++) {
-        if (visited[i] == 0) { // Unvisited node
-            comp_id++;
-            dfs(i, visited, adj_matrix, nnodes, comp_id); // Explore the component
-        }
-    }
-
-    // Print the results
-    for (int i = 1; i <= comp_id; i++) {
-        if (VERBOSE >= DEBUG) printf("Component %d: ", i);
-        for (int j = 0; j < nnodes; j++) {
-            if (visited[j] == i) {
-                if (VERBOSE >= DEBUG) printf("%d ", j + 1); // Node belongs to the component
-            }
-        }
-        if (VERBOSE >= DEBUG) printf("\n");
-    }
-
-    // Free memory
-    for (int i = 0; i < nnodes; i++) {
-        free(adj_matrix[i]);
-    }
-    free(adj_matrix);
-    free(visited);
-
-    return comp_id; // Return the number of connected components
-}
 
 
 // Function to ensure the directory exists
@@ -494,15 +415,28 @@ void patch_solution(double *xstar, instance *inst) {
 
         double best_cost = DBL_MAX;
         int best_i = -1, best_j = -1;
+        int succ_i = -1, succ_j = -1;
+        bool swap = false;
 
         for (int i = 0; i < inst->nnodes; i++) {
             for (int j = i + 1; j < inst->nnodes; j++) {
                 if (comp[i] != comp[j]) {
-                    double cij = dist(i, j, inst); 
+                    swap = false; // Reset swap flag
+                    // Find successors
+                    succ_i = succ[best_i];
+                    succ_j = succ[best_j];
+                    double cij = dist(i, j, inst) + dist(succ_j, succ_i, inst); 
                     if (cij < best_cost) {
                         best_cost = cij;
                         best_i = i;
                         best_j = j;
+                    }
+                    double cij_swap = dist(i, succ_j, inst) + dist(j, succ_i, inst);
+                    if (cij_swap < best_cost) {
+                        best_cost = cij_swap;
+                        best_i = i;
+                        best_j = j;
+                        swap = true; // Indicate that we are swapping
                     }
                 }
             }
@@ -513,17 +447,22 @@ void patch_solution(double *xstar, instance *inst) {
             break;
         }
 
-        // Find successors
-        int succ_i = succ[best_i];
-        int succ_j = succ[best_j];
-
         // Remove two edges: (best_i, succ_i) and (best_j, succ_j)
         xstar[xpos(best_i, succ_i, inst)] = 0.0;
         xstar[xpos(best_j, succ_j, inst)] = 0.0;
 
-        // Add two new edges: (best_i, best_j) and (succ_i, succ_j)
-        xstar[xpos(best_i, best_j, inst)] = 1.0;
-        xstar[xpos(succ_i, succ_j, inst)] = 1.0;
+        if  (swap == false){
+
+            // Add two new edges: (best_i, best_j) and (succ_i, succ_j)
+            xstar[xpos(best_i, best_j, inst)] = 1.0;
+            xstar[xpos(succ_j, succ_i, inst)] = 1.0;
+        }
+        else if (swap == true){
+
+            // Add two new edges: (best_i, best_j) and (succ_j, succ_i)
+            xstar[xpos(best_i, succ_j, inst)] = 1.0;
+            xstar[xpos(best_j, succ_i, inst)] = 1.0;
+        }
 
         // Rebuild the solution
         build_sol(xstar, inst, succ, comp, &ncomp);
