@@ -153,6 +153,8 @@ int TSPopt(instance *inst) {
         patch_solution(xstar, inst);
     }
 
+    build_sol(xstar, inst, succ, comp, &ncomp);
+
     // Find and display the solution
     if (VERBOSE >= DEBUG) {
         printf("Selected edges:\n");
@@ -171,6 +173,9 @@ int TSPopt(instance *inst) {
             printf("    Node %d -> Node %d\n", i + 1, succ[i] + 1);
         }
     }
+
+
+    printf("Number of components:  %d \n", ncomp);
 
     plot_graph_to_image(inst->nnodes, inst->xcoord, inst->ycoord, xstar, inst, inst->max_coord, inst->max_coord * 0.1);
     
@@ -395,6 +400,31 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
 }
 
 
+void invert_path(int start, int end, int *succ, double *xstar, instance *inst) {
+    int current = start;
+    int prev = -1;
+
+    // Follow the path and invert the successors
+    while (current != end) {
+        int next = succ[current]; // Save the current successor
+        succ[current] = prev;    // Invert the successor
+        prev = current;          // Update the previous node
+        current = next;          // Move to the next node
+    }
+
+    // Update the last node
+    succ[current] = prev;
+
+    // Update xstar to reflect the inversion
+    current = start;
+    while (current != end) {
+        int next = succ[current];
+        xstar[xpos(current, next, inst)] = 1.0;  // Add the inverted edge
+        xstar[xpos(next, current, inst)] = 0.0; // Remove the original edge
+        current = next;
+    }
+}
+
 void patch_solution(double *xstar, instance *inst) {
     int *succ = (int *) malloc(inst->nnodes * sizeof(int));
     int *comp = (int *) malloc(inst->nnodes * sizeof(int));
@@ -457,9 +487,13 @@ void patch_solution(double *xstar, instance *inst) {
             xstar[xpos(best_i, best_j, inst)] = 1.0;
             xstar[xpos(succ_j, succ_i, inst)] = 1.0;
         }
-        else if (swap == true){
-
-            // Add two new edges: (best_i, best_j) and (succ_j, succ_i)
+        else if (swap == true) { // Inversione del percorso
+            printf("Inverting path from %d to %d\n", best_j, succ_j);
+        
+            // Invert path from best_j to succ_j
+            invert_path(best_j, succ_j, succ, xstar, inst);
+        
+            // Add new edges
             xstar[xpos(best_i, succ_j, inst)] = 1.0;
             xstar[xpos(best_j, succ_i, inst)] = 1.0;
         }

@@ -47,3 +47,5 @@ void plot_graph_to_image(int nnodes, double *xcoord, double *ycoord, double *xst
 void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xstar);
 
 void patch_solution(double *xstar, instance *inst);
+
+void invert_path(int start, int end, int *succ, double *xstar, instance *inst);

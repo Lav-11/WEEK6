@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "cpx_utils.h": "c"
+        "cpx_utils.h": "c",
+        "cplex.h": "c"
     }
 }
