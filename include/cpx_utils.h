@@ -34,6 +34,8 @@ int xpos(int i, int j, instance *inst);
 // Build the CPLEX model
 void build_model(instance *inst, CPXENVptr env, CPXLPptr lp);
 
+void build_sol(const double *xstar, instance *inst, int *succ, int *comp, int *ncomp);
+
 // Solve the TSP using CPLEX
 int TSPopt(instance *inst);
 
@@ -49,3 +51,4 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
 void patch_solution(double *xstar, instance *inst);
 
 void invert_path(int start, int end, int *succ, double *xstar, instance *inst);
+
