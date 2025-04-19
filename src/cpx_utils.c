@@ -1,5 +1,5 @@
 #include "../include/cpx_utils.h"
-
+#include "../include/callback.h"
 
 void print_error(const char *err) 
 { 
@@ -106,6 +106,13 @@ int TSPopt(instance *inst) {
 
     bool apply_patching = false; // Flag to control patching process
     
+    // Register the callback function
+    CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE; // oppure anche | CPX_CALLBACKCONTEXT_RELAXATION
+
+    if ( CPXcallbacksetfunc(env, lp, contextid, my_callback, inst) )
+        print_error("Errore nella registrazione del callback");
+
+    // Solve the model
     error = CPXmipopt(env, lp);
     if (error) {
         printf("CPX error code %d\n", error);

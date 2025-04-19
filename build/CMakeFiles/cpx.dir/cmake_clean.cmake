@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/cpx.dir/src/callback.c.o"
+  "CMakeFiles/cpx.dir/src/callback.c.o.d"
   "CMakeFiles/cpx.dir/src/cpx_utils.c.o"
   "CMakeFiles/cpx.dir/src/cpx_utils.c.o.d"
   "CMakeFiles/cpx.dir/src/main.c.o"

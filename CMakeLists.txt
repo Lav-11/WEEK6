@@ -13,7 +13,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${CPLEXDIR}/include -I${CPLEXDIR}/include/
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${CPLEXDIR}/lib/arm64_osx/static_pic -lcplex -lpthread -ldl")
 
 # Creazione dell'eseguibile
-add_executable(cpx src/main.c src/cpx_utils.c)
+add_executable(cpx src/main.c src/cpx_utils.c src/callback.c)
 
 # Link a CPLEX
 target_link_libraries(cpx PRIVATE cplex dl m)

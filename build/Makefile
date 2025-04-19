@@ -149,6 +149,30 @@ cpx/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/cpx.dir/build.make CMakeFiles/cpx.dir/build
 .PHONY : cpx/fast
 
+src/callback.o: src/callback.c.o
+.PHONY : src/callback.o
+
+# target to build an object file
+src/callback.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cpx.dir/build.make CMakeFiles/cpx.dir/src/callback.c.o
+.PHONY : src/callback.c.o
+
+src/callback.i: src/callback.c.i
+.PHONY : src/callback.i
+
+# target to preprocess a source file
+src/callback.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cpx.dir/build.make CMakeFiles/cpx.dir/src/callback.c.i
+.PHONY : src/callback.c.i
+
+src/callback.s: src/callback.c.s
+.PHONY : src/callback.s
+
+# target to generate assembly for a file
+src/callback.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/cpx.dir/build.make CMakeFiles/cpx.dir/src/callback.c.s
+.PHONY : src/callback.c.s
+
 src/cpx_utils.o: src/cpx_utils.c.o
 .PHONY : src/cpx_utils.o
 
@@ -208,6 +232,9 @@ help:
 	@echo "... package_source"
 	@echo "... rebuild_cache"
 	@echo "... cpx"
+	@echo "... src/callback.o"
+	@echo "... src/callback.i"
+	@echo "... src/callback.s"
 	@echo "... src/cpx_utils.o"
 	@echo "... src/cpx_utils.i"
 	@echo "... src/cpx_utils.s"
