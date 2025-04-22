@@ -88,51 +88,57 @@ int TSPopt(instance *inst) {
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP model version 1");
     if (error) print_error("CPXcreateprob() error");
 
+    // Build the TSP model
     build_model(inst, env, lp);
     inst->ncols = CPXgetnumcols(env, lp);
 
-    // Parametri CPLEX
+    // Set CPLEX parameters
     CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_OFF);
     if (VERBOSE >= DEBUG) CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON); // Enable CPLEX screen output
     CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 123456);
-    double timelimit = 20.0;
+    double timelimit = 600.0;
     CPXsetdblparam(env, CPX_PARAM_TILIM, timelimit);
 
     double start_time = 0.0;
     CPXgettime(env, &start_time);
 
-    bool apply_patching = true;
-    bool use_callback = true;  // Modifica questa variabile per scegliere se usare il callback o meno
+    bool apply_patching = false;
+    bool use_callback = true;  // Modify this variable to choose whether to use the callback or not
 
     if (use_callback) {
-        // Registrazione del callback
+        // Register the callback
         CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
         if (CPXcallbacksetfunc(env, lp, contextid, my_callback, inst))
             print_error("Error while registering the callback");
     }
 
+    // Solve the model
     error = CPXmipopt(env, lp);
     if (error) {
         printf("CPX error code %d\n", error);
         print_error("CPXmipopt() error");
     }
 
+    // Retrieve the solution
     double *xstar = (double *)calloc(inst->ncols, sizeof(double));
     if (CPXgetx(env, lp, xstar, 0, inst->ncols - 1)) print_error("CPXgetx() error");
 
-
+    // Build the solution and check for subtours
     int *succ = (int *)calloc(inst->nnodes, sizeof(int));
     int *comp = (int *)calloc(inst->nnodes, sizeof(int));
     int ncomp;
     build_sol(xstar, inst, succ, comp, &ncomp);
 
+    // Perform Benders' loop to eliminate subtours
     benders_loop(inst, env, lp, &xstar, succ, comp, start_time, timelimit, &apply_patching);
 
+    // Apply patching if necessary
     if (apply_patching) {
         printf("Patching solution...\n");
         patch_solution(xstar, inst);
     }
 
+    // Print the solution details if verbose
     if (VERBOSE >= DEBUG) {
         printf("Selected edges:\n");
         for (int i = 0; i < inst->nnodes; i++) {
@@ -147,18 +153,22 @@ int TSPopt(instance *inst) {
             printf("    Node %d -> Node %d\n", i + 1, succ[i] + 1);
         }
     }
+
+    // Rebuild the solution and print the number of components
     build_sol(xstar, inst, succ, comp, &ncomp);
     printf("Number of components:  %d \n", ncomp);
 
-    // Ottieni e stampa il valore dell'obiettivo finale
+    // Get and print the final objective value
     double objval;
     if (CPXgetobjval(env, lp, &objval)) {
         print_error("CPXgetobjval() error");
     }
     printf("Final objective value: %f\n", objval);
 
+    // Plot the graph and save it as an image
     plot_graph_to_image(inst->nnodes, inst->xcoord, inst->ycoord, xstar, inst, inst->max_coord, inst->max_coord * 0.1);
 
+    // Free allocated memory and close CPLEX
     free(comp);
     free(succ);
     free(xstar);
@@ -330,12 +340,14 @@ void benders_loop(instance *inst, CPXENVptr env, CPXLPptr lp, double **xstar_ptr
     double *xstar = (double *)calloc(ncols, sizeof(double));
     if (xstar == NULL) print_error("calloc() error for xstar");
 
+    // Solve the initial model
     if (CPXmipopt(env, lp)) print_error("CPXmipopt() error (initial)");
     if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error (initial)");
 
     int ncomp = -1;
     build_sol(xstar, inst, succ, comp, &ncomp);
 
+    // Loop until there are no subtours
     while (ncomp > 1) {
         double end_time = 0.0;
         CPXgettime(env, &end_time);
@@ -343,17 +355,20 @@ void benders_loop(instance *inst, CPXENVptr env, CPXLPptr lp, double **xstar_ptr
 
         printf("Subtours detected: %d components. Adding SEC constraints...\n", ncomp);
 
+        // Add Subtour Elimination Constraints (SEC)
         add_SEC_constraints(inst, env, lp, xstar, NULL, -1);
 
         free(xstar);
         xstar = (double *)calloc(ncols, sizeof(double));
         if (xstar == NULL) print_error("calloc() error for xstar (loop)");
 
+        // Re-solve the model after adding SEC
         if (CPXmipopt(env, lp)) print_error("CPXmipopt() error (after SEC)");
         if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error (after SEC)");
 
         build_sol(xstar, inst, succ, comp, &ncomp);
 
+        // Check if the time limit has been exceeded
         if (elapsed_time >= timelimit) {
             printf("Time limit exceeded. Initiating patching process...\n");
             *apply_patching = true;
@@ -361,7 +376,7 @@ void benders_loop(instance *inst, CPXENVptr env, CPXLPptr lp, double **xstar_ptr
         }
     }
 
-    *xstar_ptr = xstar;  // Pass result back
+    *xstar_ptr = xstar;  // Pass the result back
 }
 
 void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xstar,
@@ -372,6 +387,7 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
 
     build_sol(xstar, inst, succ, comp, &ncomp);
 
+    // If there is only one component, no SEC is needed
     if (ncomp <= 1) {
         free(succ);
         free(comp);
@@ -380,6 +396,7 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
 
     printf("Adding %d SEC constraints%s...\n", ncomp, context ? " via callback" : "");
 
+    // Add SEC constraints for each component
     for (int k = 1; k <= ncomp; k++) {
         int size = 0;
         for (int i = 0; i < inst->nnodes; i++)
@@ -391,6 +408,7 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
         double *value = (double *)malloc(max_nz * sizeof(double));
         int nz = 0;
 
+        // Collect edges within the component
         for (int i = 0; i < inst->nnodes; i++) {
             if (comp[i] != k) continue;
             for (int j = i + 1; j < inst->nnodes; j++) {
@@ -405,7 +423,7 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
         int izero = 0;
 
         if (context) {
-            // Siamo nel callback
+            // Add SEC via callback
             if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE) {
                 if (CPXcallbackrejectcandidate(context, 1, nz, &rhs, &sense, &izero, index, value)) {
                     print_error("CPXcallbackrejectcandidate() error");
@@ -418,7 +436,7 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
                 }
             }
         } else {
-            // Siamo nella fase standard (TSPopt)
+            // Add SEC in the standard phase
             char *rowname = (char *)malloc(100 * sizeof(char));
             sprintf(rowname, "SEC_comp_%d", k);
             if (CPXaddrows(env, lp, 0, 1, nz, &rhs, &sense, &izero, index, value, NULL, &rowname)) {
@@ -434,7 +452,6 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
     free(succ);
     free(comp);
 }
-
 
 void invert_path(int start, int end, int *succ, double *xstar, instance *inst) {
     int current = start;
@@ -468,6 +485,7 @@ void patch_solution(double *xstar, instance *inst) {
 
     build_sol(xstar, inst, succ, comp, &ncomp);
 
+    // If there is only one component, no patching is needed
     if (ncomp <= 1) {
         printf("No patching needed. Solution is a single tour.\n");
         free(succ);
@@ -484,6 +502,7 @@ void patch_solution(double *xstar, instance *inst) {
         int succ_i = -1, succ_j = -1;
         bool swap = false;
 
+        // Find the best pair of edges to connect components
         for (int i = 0; i < inst->nnodes; i++) {
             for (int j = i + 1; j < inst->nnodes; j++) {
                 if (comp[i] != comp[j]) {
@@ -523,7 +542,7 @@ void patch_solution(double *xstar, instance *inst) {
             xstar[xpos(best_i, best_j, inst)] = 1.0;
             xstar[xpos(succ_j, succ_i, inst)] = 1.0;
         }
-        else if (swap == true) { // Inversione del percorso
+        else if (swap == true) { // Invert the path
             printf("Inverting path from %d to %d\n", best_j, succ_j);
         
             // Invert path from best_j to succ_j

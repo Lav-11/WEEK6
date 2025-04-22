@@ -19,7 +19,6 @@ typedef struct {
     int integer_costs;
     double zbest;
     double max_coord;
-    int use_callback;  // 1 to use callback, 0 otherwise
 } instance;
 
 // Function prototypes

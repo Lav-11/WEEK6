@@ -5,15 +5,15 @@
 int CPXPUBLIC my_callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle) {
     instance *inst = (instance *)userhandle;
 
-    // Ottieni numero di variabili (archi) dal modello
+    // Get the number of variables (edges) from the model
     int ncols = inst->ncols;
 
-    // Alloca il vettore xstar delle variabili
+    // Allocate the xstar vector for the variables
     double *xstar = (double *)malloc(ncols * sizeof(double));
     if (!xstar) print_error("Memory allocation error");
 
     double objval = CPX_INFBOUND;
-    // Estrai la soluzione corrente dal callback (candidate o relaxation)
+    // Extract the current solution from the callback (candidate or relaxation)
     if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE) {
         if (CPXcallbackgetcandidatepoint(context, xstar, 0, ncols - 1, &objval)) {
             print_error("CPXcallbackgetcandidatepoint error");
@@ -24,10 +24,10 @@ int CPXPUBLIC my_callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void
         }
     } else {
         free(xstar);
-        return 0; // Non ci interessa gestire altri tipi di callback
+        return 0; // We are not interested in handling other types of callbacks
     }
 
-    // Informazioni di debug opzionali
+    // Optional debug information
     int mythread = -1;
     CPXcallbackgetinfoint(context, CPXCALLBACKINFO_THREADID, &mythread);
     int mynode = -1;
@@ -35,7 +35,7 @@ int CPXPUBLIC my_callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void
     double incumbent = CPX_INFBOUND;
     CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_BEST_SOL, &incumbent);
 
-    // Aggiunta vincoli SEC se ci sono sottogiri
+    // Add SEC constraints if there are subtours
     add_SEC_constraints(inst, NULL, NULL, xstar, context, contextid);
 
     free(xstar);
