@@ -81,119 +81,91 @@ void build_sol(const double *xstar, instance *inst, int *succ, int *comp, int *n
 	}
 }
 
-/**************************************************************************************************************************/
 int TSPopt(instance *inst) {
-/**************************************************************************************************************************/
-    // open CPLEX model
     int error;
     CPXENVptr env = CPXopenCPLEX(&error);
     if (error) print_error("CPXopenCPLEX() error");
     CPXLPptr lp = CPXcreateprob(env, &error, "TSP model version 1");
     if (error) print_error("CPXcreateprob() error");
-    
+
     build_model(inst, env, lp);
-    
-    // Cplex's parameter setting
+    inst->ncols = CPXgetnumcols(env, lp);
+
+    // Parametri CPLEX
     CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_OFF);
-    if (VERBOSE >= DEBUG) CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON); // Cplex output on screen
+    if (VERBOSE >= DEBUG) CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON); // Enable CPLEX screen output
     CPXsetintparam(env, CPX_PARAM_RANDOMSEED, 123456);
-    double timelimit = 2.0;
+    double timelimit = 20.0;
     CPXsetdblparam(env, CPX_PARAM_TILIM, timelimit);
-    
-    // Set a timer to track elapsed time
+
     double start_time = 0.0;
     CPXgettime(env, &start_time);
 
-    bool apply_patching = false; // Flag to control patching process
-    
-    // Register the callback function
-    CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE; // oppure anche | CPX_CALLBACKCONTEXT_RELAXATION
+    bool apply_patching = true;
+    bool use_callback = true;  // Modifica questa variabile per scegliere se usare il callback o meno
 
-    if ( CPXcallbacksetfunc(env, lp, contextid, my_callback, inst) )
-        print_error("Errore nella registrazione del callback");
+    if (use_callback) {
+        // Registrazione del callback
+        CPXLONG contextid = CPX_CALLBACKCONTEXT_CANDIDATE;
+        if (CPXcallbacksetfunc(env, lp, contextid, my_callback, inst))
+            print_error("Error while registering the callback");
+    }
 
-    // Solve the model
     error = CPXmipopt(env, lp);
     if (error) {
         printf("CPX error code %d\n", error);
         print_error("CPXmipopt() error");
     }
-    
-    // use the optimal solution found by CPLEX
-    int ncols = CPXgetnumcols(env, lp);
-    double *xstar = (double *)calloc(ncols, sizeof(double));
-    if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error");
-    
-    // Find connected components using build_sol
+
+    double *xstar = (double *)calloc(inst->ncols, sizeof(double));
+    if (CPXgetx(env, lp, xstar, 0, inst->ncols - 1)) print_error("CPXgetx() error");
+
+
     int *succ = (int *)calloc(inst->nnodes, sizeof(int));
     int *comp = (int *)calloc(inst->nnodes, sizeof(int));
     int ncomp;
     build_sol(xstar, inst, succ, comp, &ncomp);
-    
-    while (ncomp > 1) {
-        double end_time = 0.0;
-        CPXgettime(env, &end_time);
-        double elapsed_time = end_time - start_time;
-    
-        printf("Subtours detected: %d components. Adding SEC constraints...\n", ncomp);
-        add_SEC_constraints(inst, env, lp, xstar);
-    
-        free(xstar);
-        xstar = (double *)calloc(CPXgetnumcols(env, lp), sizeof(double));
-    
-        if (CPXmipopt(env, lp)) print_error("CPXmipopt() error (after SEC)");
-    
-        if (CPXgetx(env, lp, xstar, 0, CPXgetnumcols(env, lp) - 1)) print_error("CPXgetx() error (after SEC)");
-    
-        build_sol(xstar, inst, succ, comp, &ncomp);
 
-        // Check if time limit is exceeded
-        if (elapsed_time >= timelimit) {  // Time limit exceeded
-            printf("Time limit exceeded. Initiating patching process...\n");
-            apply_patching = true; // Set the flag to true
-            break; // Exit the loop and perform patching
-        }
-    }
+    benders_loop(inst, env, lp, &xstar, succ, comp, start_time, timelimit, &apply_patching);
 
-    if(apply_patching == true) {
+    if (apply_patching) {
         printf("Patching solution...\n");
         patch_solution(xstar, inst);
     }
 
-    build_sol(xstar, inst, succ, comp, &ncomp);
-
-    // Find and display the solution
     if (VERBOSE >= DEBUG) {
         printf("Selected edges:\n");
         for (int i = 0; i < inst->nnodes; i++) {
             for (int j = i + 1; j < inst->nnodes; j++) {
                 if (xstar[xpos(i, j, inst)] > 0.5)
-                    if (VERBOSE >= DEBUG) printf("x(%3d,%3d) = 1\n", i + 1, j + 1);
+                    printf("x(%3d,%3d) = 1\n", i + 1, j + 1);
             }
         }
-    }
 
-    // Prints the successors
-    if (VERBOSE >= DEBUG) {
         printf("\nArray of successors:\n");
         for (int i = 0; i < inst->nnodes; i++) {
             printf("    Node %d -> Node %d\n", i + 1, succ[i] + 1);
         }
     }
-
-
+    build_sol(xstar, inst, succ, comp, &ncomp);
     printf("Number of components:  %d \n", ncomp);
 
+    // Ottieni e stampa il valore dell'obiettivo finale
+    double objval;
+    if (CPXgetobjval(env, lp, &objval)) {
+        print_error("CPXgetobjval() error");
+    }
+    printf("Final objective value: %f\n", objval);
+
     plot_graph_to_image(inst->nnodes, inst->xcoord, inst->ycoord, xstar, inst, inst->max_coord, inst->max_coord * 0.1);
-    
+
     free(comp);
     free(succ);
     free(xstar);
-    // free and close CPLEX model
     CPXfreeprob(env, &lp);
     CPXcloseCPLEX(&env);
-    
-    return 0; // or an appropriate nonzero error code
+
+    return 0;
 }
 
 /***************************************************************************************************************************/
@@ -349,7 +321,51 @@ void plot_graph_to_image(int nnodes, double *xcoord, double *ycoord, double *xst
     printf("Graph saved as an image: %s\n", image_file_path);
 }
 
-void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xstar) {
+
+void benders_loop(instance *inst, CPXENVptr env, CPXLPptr lp, double **xstar_ptr,
+                  int *succ, int *comp, double start_time, double timelimit,
+                  bool *apply_patching) {
+    
+    int ncols = CPXgetnumcols(env, lp);
+    double *xstar = (double *)calloc(ncols, sizeof(double));
+    if (xstar == NULL) print_error("calloc() error for xstar");
+
+    if (CPXmipopt(env, lp)) print_error("CPXmipopt() error (initial)");
+    if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error (initial)");
+
+    int ncomp = -1;
+    build_sol(xstar, inst, succ, comp, &ncomp);
+
+    while (ncomp > 1) {
+        double end_time = 0.0;
+        CPXgettime(env, &end_time);
+        double elapsed_time = end_time - start_time;
+
+        printf("Subtours detected: %d components. Adding SEC constraints...\n", ncomp);
+
+        add_SEC_constraints(inst, env, lp, xstar, NULL, -1);
+
+        free(xstar);
+        xstar = (double *)calloc(ncols, sizeof(double));
+        if (xstar == NULL) print_error("calloc() error for xstar (loop)");
+
+        if (CPXmipopt(env, lp)) print_error("CPXmipopt() error (after SEC)");
+        if (CPXgetx(env, lp, xstar, 0, ncols - 1)) print_error("CPXgetx() error (after SEC)");
+
+        build_sol(xstar, inst, succ, comp, &ncomp);
+
+        if (elapsed_time >= timelimit) {
+            printf("Time limit exceeded. Initiating patching process...\n");
+            *apply_patching = true;
+            break;
+        }
+    }
+
+    *xstar_ptr = xstar;  // Pass result back
+}
+
+void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xstar,
+                         CPXCALLBACKCONTEXTptr context, int contextid) {
     int *succ = (int *)calloc(inst->nnodes, sizeof(int));
     int *comp = (int *)calloc(inst->nnodes, sizeof(int));
     int ncomp;
@@ -359,21 +375,17 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
     if (ncomp <= 1) {
         free(succ);
         free(comp);
-        return; // No subtours, no need to add SEC
+        return;
     }
 
-    printf("Adding %d subtour elimination constraints...\n", ncomp);
+    printf("Adding %d SEC constraints%s...\n", ncomp, context ? " via callback" : "");
 
     for (int k = 1; k <= ncomp; k++) {
-        // Count how many nodes are in component k
         int size = 0;
-        for (int i = 0; i < inst->nnodes; i++) {
+        for (int i = 0; i < inst->nnodes; i++)
             if (comp[i] == k) size++;
-        }
-
         if (size <= 1) continue;
 
-        // Prepare indices and coefficients
         int max_nz = size * (size - 1) / 2;
         int *index = (int *)malloc(max_nz * sizeof(int));
         double *value = (double *)malloc(max_nz * sizeof(double));
@@ -389,17 +401,34 @@ void add_SEC_constraints(instance *inst, CPXENVptr env, CPXLPptr lp, double *xst
         }
 
         double rhs = size - 1.0;
-        char sense = 'L'; // <=
+        char sense = 'L';
         int izero = 0;
-        char *rowname = (char *)malloc(100 * sizeof(char));
-        sprintf(rowname, "SEC_comp_%d", k);
 
-        int error = CPXaddrows(env, lp, 0, 1, nz, &rhs, &sense, &izero, index, value, NULL, &rowname);
-        if (error) print_error("CPXaddrows() failed for SEC");
+        if (context) {
+            // Siamo nel callback
+            if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE) {
+                if (CPXcallbackrejectcandidate(context, 1, nz, &rhs, &sense, &izero, index, value)) {
+                    print_error("CPXcallbackrejectcandidate() error");
+                }
+            } else if (contextid == CPX_CALLBACKCONTEXT_RELAXATION) {
+                int purgeable = CPX_USECUT_FILTER;
+                int local = 0;
+                if (CPXcallbackaddusercuts(context, 1, nz, &rhs, &sense, &izero, index, value, &purgeable, &local)) {
+                    print_error("CPXcallbackaddusercuts() error");
+                }
+            }
+        } else {
+            // Siamo nella fase standard (TSPopt)
+            char *rowname = (char *)malloc(100 * sizeof(char));
+            sprintf(rowname, "SEC_comp_%d", k);
+            if (CPXaddrows(env, lp, 0, 1, nz, &rhs, &sense, &izero, index, value, NULL, &rowname)) {
+                print_error("CPXaddrows() failed for SEC");
+            }
+            free(rowname);
+        }
 
         free(index);
         free(value);
-        free(rowname);
     }
 
     free(succ);

@@ -1,26 +1,33 @@
 #include "../include/callback.h"
 #include "../include/cpx_utils.h"
 
-
-
 // Callback function
 int CPXPUBLIC my_callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void *userhandle) {
     instance *inst = (instance *)userhandle;
-    double *xstar = (double *)malloc(inst->nnodes * sizeof(double));
+
+    // Ottieni numero di variabili (archi) dal modello
+    int ncols = inst->ncols;
+
+    // Alloca il vettore xstar delle variabili
+    double *xstar = (double *)malloc(ncols * sizeof(double));
     if (!xstar) print_error("Memory allocation error");
 
     double objval = CPX_INFBOUND;
-    if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE &&
-        CPXcallbackgetcandidatepoint(context, xstar, 0, inst->nnodes - 1, &objval)) {
-        print_error("CPXcallbackgetcandidatepoint error");
+    // Estrai la soluzione corrente dal callback (candidate o relaxation)
+    if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE) {
+        if (CPXcallbackgetcandidatepoint(context, xstar, 0, ncols - 1, &objval)) {
+            print_error("CPXcallbackgetcandidatepoint error");
+        }
+    } else if (contextid == CPX_CALLBACKCONTEXT_RELAXATION) {
+        if (CPXcallbackgetrelaxationpoint(context, xstar, 0, ncols - 1, &objval)) {
+            print_error("CPXcallbackgetrelaxationpoint error");
+        }
+    } else {
+        free(xstar);
+        return 0; // Non ci interessa gestire altri tipi di callback
     }
 
-    if (contextid == CPX_CALLBACKCONTEXT_RELAXATION &&
-        CPXcallbackgetrelaxationpoint(context, xstar, 0, inst->nnodes - 1, &objval)) {
-        print_error("CPXcallbackgetrelaxationpoint error");
-    }
-
-    // Example of using node information
+    // Informazioni di debug opzionali
     int mythread = -1;
     CPXcallbackgetinfoint(context, CPXCALLBACKINFO_THREADID, &mythread);
     int mynode = -1;
@@ -28,29 +35,8 @@ int CPXPUBLIC my_callback(CPXCALLBACKCONTEXTptr context, CPXLONG contextid, void
     double incumbent = CPX_INFBOUND;
     CPXcallbackgetinfodbl(context, CPXCALLBACKINFO_BEST_SOL, &incumbent);
 
-    // Logic to check infeasibility and add cuts
-    int nnz = 0; // Number of non-zero elements in the cut
-    double rhs = 0.0; // Right-hand side of the cut
-    char sense = 'L'; // Sense of the cut ('L' for <=, 'G' for >=, 'E' for =)
-    int *index = NULL; // Indices of the variables in the cut
-    double *value = NULL; // Coefficients of the variables in the cut
-
-    // Example: if you find a violated cut
-    if (nnz > 0) {
-        int izero = 0;
-        if (contextid == CPX_CALLBACKCONTEXT_CANDIDATE &&
-            CPXcallbackrejectcandidate(context, 1, nnz, &rhs, &sense, &izero, index, value)) {
-            print_error("CPXcallbackrejectcandidate() error");
-        }
-
-        if (contextid == CPX_CALLBACKCONTEXT_RELAXATION) {
-            int purgeable = CPX_USECUT_FILTER;
-            int local = 0;
-            if (CPXcallbackaddusercuts(context, 1, nnz, &rhs, &sense, &izero, index, value, &purgeable, &local)) {
-                print_error("CPXcallbackaddusercuts() error");
-            }
-        }
-    }
+    // Aggiunta vincoli SEC se ci sono sottogiri
+    add_SEC_constraints(inst, NULL, NULL, xstar, context, contextid);
 
     free(xstar);
     return 0;
